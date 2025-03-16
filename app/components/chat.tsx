@@ -100,14 +100,36 @@ import { useAllModels } from "../utils/hooks";
 const Markdown = dynamic(async () => (await import("./markdown")).Markdown, {
   loading: () => <LoadingIcon />,
 });
-const recordUserInteraction = async (UserID: any, ButtonName: any, UserLogTime: any, GPTMessages: any, Note: any) => {
-  const response = await fetch('/api/recordInteraction', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ UserID, ButtonName, UserLogTime, GPTMessages, Note }),
-  })};
+const recordUserInteraction = async (
+  UserID: any,
+  ButtonName: any,
+  UserLogTime: any,
+  GPTMessages: any,
+  Note: any
+) => {
+  try {
+    const response = await fetch('/api/recordInteraction', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ UserID, ButtonName, UserLogTime, GPTMessages, Note }),
+    });
+
+    if (!response.ok) {
+      // 如果响应状态码不是 2xx，抛出错误
+      const errorData = await response.json(); // 尝试解析错误信息
+      throw new Error(`Failed to record interaction: ${errorData.message}`);
+    }
+
+    const data = await response.json(); // 解析响应数据
+    console.log('Interaction recorded successfully:', data);
+    return data; // 返回成功响应
+  } catch (error) {
+    console.error('Error recording user interaction:', error);
+    throw error; // 向上传递错误
+  }
+};
 
 export function SessionConfigModel(props: { onClose: () => void }) {
   const chatStore = useChatStore();
