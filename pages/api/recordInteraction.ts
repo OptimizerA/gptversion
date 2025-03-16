@@ -69,7 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const { action, ...data } = req.body;
-
+  console.log("开始", action);
+  console.log("开始", data);
   try {
     if (action === 'insertInteraction') {
       console.log("开始");
