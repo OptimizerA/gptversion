@@ -72,6 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     if (action === 'insertInteraction') {
+      console.log(data);
       const { UserID, ButtonName, UserLogTime, GPTMessages, Note, QuestionID } = data;
       const query = `
         INSERT INTO user_log ("UserID", "ButtonName", "UserLogTime", "GPTMessages", "Note", "QuestionID")
@@ -79,23 +80,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         RETURNING *;
       `;
       const params = [UserID, ButtonName, UserLogTime, GPTMessages, Note, QuestionID || null];
-      const result = await pool.query(query, params);
-
-      if (result.rows.length > 0) {
-        res.status(200).json({ success: true, message: 'Data inserted successfully' });
-      } else {
-        throw new Error('Failed to insert data');
+      
+      console.log(`Query: ${query}`);
+      console.log(`Params:`, params);
+    
+      try {
+        const result = await pool.query(query, params);
+        if (result.rows.length > 0) {
+          res.status(200).json({ success: true, message: 'Data inserted successfully' });
+        } else {
+          throw new Error('Failed to insert data');
+        }
+      } catch (error) {
+        console.error(`Error in insertInteraction query:`, error);
+        throw error;
       }
     } else if (action === 'fetchUserID') {
       const { username } = data;
       const query = 'SELECT "UserID" FROM "user" WHERE "UserName" = $1';
-      const result = await pool.query(query, [username]);
-
-      if (result.rows.length > 0) {
-        const { UserID } = result.rows[0];
-        res.status(200).json({ success: true, UserID });
-      } else {
-        res.status(404).json({ success: false, message: 'User not found' });
+      console.log(`Query: ${query}`);
+      console.log(`Params:`, [username]);
+    
+      try {
+        const result = await pool.query(query, [username]);
+        if (result.rows.length > 0) {
+          const { UserID } = result.rows[0];
+          res.status(200).json({ success: true, UserID });
+        } else {
+          res.status(404).json({ success: false, message: 'User not found' });
+        }
+      } catch (error) {
+        console.error(`Error in fetchUserID query:`, error);
+        throw error;
       }
     } else {
       res.status(400).json({ message: 'Invalid action' });
