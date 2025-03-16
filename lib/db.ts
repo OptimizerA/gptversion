@@ -1,4 +1,4 @@
-import mysql from 'mysql2/promise';
+// import mysql from 'mysql2/promise';
 import { Pool } from 'pg';
 
 // 创建数据库连接池
@@ -15,7 +15,7 @@ import { Pool } from 'pg';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
-    rejectUnauthorized: false,
+    rejectUnauthorized: true,
   },
   max: 20, // 最大连接数
   idleTimeoutMillis: 30000, // 空闲连接超时时间

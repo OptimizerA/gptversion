@@ -72,6 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     if (action === 'insertInteraction') {
+      console.log("开始");
       console.log(data);
       const { UserID, ButtonName, UserLogTime, GPTMessages, Note, QuestionID } = data;
       const query = `
