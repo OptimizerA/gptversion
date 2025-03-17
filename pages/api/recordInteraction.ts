@@ -67,9 +67,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
+
   const { action, ...data } = req.body;
-  console.log("action: " + action);
+  console.log("Action:", action);
+
   try {
+    // 检查 PostgreSQL 连接池是否已连接
+    if (!pool) {
+      throw new Error('Database connection pool is not initialized');
+    }
+
+    // 尝试从连接池获取一个连接
+    const client = await pool.connect().catch((err) => {
+      console.error('Failed to connect to the database:', err);
+      throw new Error('Failed to connect to the database');
+    });
+
     if (action === 'insertInteraction') {
       console.log("开始");
       console.log(data);
@@ -80,12 +93,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         RETURNING *;
       `;
       const params = [UserID, ButtonName, UserLogTime, GPTMessages, Note, QuestionID || null];
-      
+
       console.log(`Query: ${query}`);
       console.log(`Params:`, params);
-    
+
       try {
-        const result = await pool.query(query, params);
+        const result = await client.query(query, params);
         if (result.rows.length > 0) {
           res.status(200).json({ success: true, message: 'Data inserted successfully' });
         } else {
@@ -94,15 +107,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch (error) {
         console.error(`Error in insertInteraction query:`, error);
         throw error;
+      } finally {
+        client.release(); // 释放连接
       }
     } else if (action === 'fetchUserID') {
       const { username } = data;
       const query = 'SELECT "UserID" FROM "user" WHERE "UserName" = $1';
       console.log(`Query: ${query}`);
       console.log(`Params:`, [username]);
-    
+
       try {
-        const result = await pool.query(query, [username]);
+        const result = await client.query(query, [username]);
         if (result.rows.length > 0) {
           const { UserID } = result.rows[0];
           res.status(200).json({ success: true, UserID });
@@ -112,6 +127,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch (error) {
         console.error(`Error in fetchUserID query:`, error);
         throw error;
+      } finally {
+        client.release(); // 释放连接
       }
     } else {
       res.status(400).json({ message: 'Invalid action' });
