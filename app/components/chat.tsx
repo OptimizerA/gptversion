@@ -733,6 +733,7 @@ function _Chat() {
   const doSubmit = async (userInput: string, questionId?: number) => {
     if (userInput.trim() === "") return;
     // Fetch UserID based on the username
+    console.log("fetch extractedUsername:", extractedUsername);
     const userResponse = await fetch('/api/recordInteraction', {
       method: 'POST',
       headers: {
