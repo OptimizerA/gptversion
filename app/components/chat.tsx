@@ -735,48 +735,25 @@ function _Chat() {
     // Fetch UserID based on the username
     // 检查 extractedUsername 是否已正确设置
     console.log("Current extractedUsername:", extractedUsername); // 记录当前用户名
-    
     if (!extractedUsername) {
       console.error("extractedUsername is not set or is null");
       return; // 如果用户名未设置，提前返回
     }
-    try {
-      const userResponse = await fetch('/api/recordInteraction', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'fetchUserID',
-          username: extractedUsername,
-        }),
-      });
-  
-      if (!userResponse.ok) {
-        throw new Error('Failed to fetch user ID');
-      }
-  
-      const result = await userResponse.json();
-      console.log("Fetched UserID:", result.UserID); // 记录获取到的 UserID
-    } catch (error) {
-      console.error("Error fetching user ID:", error);
+    const userResponse = await fetch('/api/recordInteraction', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'fetchUserID',
+        username: extractedUsername,
+      }),
+    });
+   
+    if (!userResponse.ok) {
+      throw new Error('Failed to fetch user ID');
     }
     
-    // const userResponse = await fetch('/api/recordInteraction', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     action: 'fetchUserID',
-    //     username: extractedUsername,
-    //   }),
-    // });
-   
-    // if (!userResponse.ok) {
-    //   throw new Error('Failed to fetch user ID');
-    // }
-
     const { UserID } = await userResponse.json();
     const params1 = new URLSearchParams(window.location.search);
     const questionid1 = params1.get("QuestionID");
