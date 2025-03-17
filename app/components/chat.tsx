@@ -2,7 +2,7 @@
 // import jwtDecode from 'jwt-decode'; // Correct import for jwt-decode
 import {jwtDecode} from 'jwt-decode';
 import { JwtPayload } from 'jwt-decode';
-import pool from '../../lib/db';
+import pool from '../../lib/db'
 // Define a new interface that includes the expected properties from the JWT payload
 interface MyTokenPayload extends JwtPayload {
   username?: string;
@@ -532,6 +532,17 @@ function _Chat() {
   const navigate = useNavigate();
   // prompt hints
   const promptStore = usePromptStore();
+  const checkDatabaseConnection = async () => {
+    try {
+      const client = await pool.connect();
+      console.log("Database connection pool is available.");
+      client.release(); // 释放连接
+      return true; // 返回成功状态
+    } catch (error) {
+      console.error("Failed to connect to the database:", error);
+      return false; // 返回失败状态
+    }
+  };
 
   useEffect(() => {
     console.log("Session messages:", session.messages);
@@ -580,50 +591,52 @@ function _Chat() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    
+
     if (token) {
       const decodedToken = jwtDecode<MyTokenPayload>(token);
-      if (decodedToken.gptAuth) {
-        updateAccessStore((state) => {
-          return { ...state, accessCode: decodedToken.gptAuth };
-        });
-      if (decodedToken.profile){
-          // 先检查数据库连接池是否可用
-        let client;
-        try {
-          client = await pool.connect(); // 尝试获取连接
-          console.log("Database connection pool is available.");
-        } catch (error) {
-          console.error("Failed to connect to the database:", error);
-          return; // 如果连接失败，直接返回，避免后续操作
-        } finally {
-          if (client) {
-            client.release(); // 释放连接
-          }
+
+      // 检查数据库连接池状态
+      const checkConnectionAndProceed = async () => {
+        const isConnected = await checkDatabaseConnection();
+        if (!isConnected) {
+          console.error("Database connection is not available. Skipping further actions.");
+          return;
         }
 
-        // 如果连接池可用，继续更新会话
-        chatStore.updateCurrentSession(session => {
-          const updatedMask = { ...session.mask }; // 复制当前的 mask
-          updatedMask.context[0].content = decodedToken.prompt; // 修改上下文内容
-          updatedMask.context[1].content = decodedToken.profile;
-          updatedMask.context[2].content = decodedToken.course;
-          session.mask = updatedMask; // 将修改后的 mask 设置回会话
-          console.log("now the context1 is", session.mask.context[0].content);
-          console.log("now the context2 is", session.mask.context[1].content);
-          console.log("now the context3 is", session.mask.context[2].content);
-        });
-      }
-      if (decodedToken.username) {
-            setExtractedUsername(decodedToken.username);
-      }
-      console.log('Extracted Username:', decodedToken.username);
-      console.log('Extracted Experiment Group:', decodedToken.experimentGroup);
-      console.log('Extracted pwd:', decodedToken.password);
-      }
+        // 如果连接成功，继续执行后续逻辑
+        if (decodedToken.gptAuth) {
+          updateAccessStore((state) => {
+            return { ...state, accessCode: decodedToken.gptAuth };
+          });
+        }
+
+        if (decodedToken.profile) {
+          chatStore.updateCurrentSession(session => {
+            const updatedMask = { ...session.mask }; // Copy the current mask
+            updatedMask.context[0].content = decodedToken.prompt; // Modify the context by adding a new item
+            updatedMask.context[1].content = decodedToken.profile;
+            updatedMask.context[2].content = decodedToken.course;
+            session.mask = updatedMask; // Set the modified mask back to the session
+            console.log("now the context1 is", session.mask.context[0].content);
+            console.log("now the context2 is", session.mask.context[1].content);
+            console.log("now the context3 is", session.mask.context[2].content);
+          });
+        }
+
+        if (decodedToken.username) {
+          setExtractedUsername(decodedToken.username);
+        }
+
+        console.log('Extracted Username:', decodedToken.username);
+        console.log('Extracted Experiment Group:', decodedToken.experimentGroup);
+        console.log('Extracted pwd:', decodedToken.password);
+      };
+
+      checkConnectionAndProceed();
     }
+
     console.log('Extracted Username (extractedUsername state1):', extractedUsername);
-  }, [updateAccessStore,extractedUsername]);
+  }, [updateAccessStore, extractedUsername]);
   const [botResponseCount, setBotResponseCount] = useState(0);
   useEffect(measure, [userInput]);
   // chat commands shortcuts
