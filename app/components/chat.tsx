@@ -511,6 +511,7 @@ export function EditMessageModal(props: { onClose: () => void }) {
     </div>
   );
 }
+import pool from '../../lib/db';
 function _Chat() {
   type RenderMessage = ChatMessage & { preview?: boolean };
   const chatStore = useChatStore();
@@ -531,6 +532,32 @@ function _Chat() {
   const navigate = useNavigate();
   // prompt hints
   const promptStore = usePromptStore();
+  
+  useEffect(() => {
+    // 定义异步函数来检查数据库连接
+    const checkDatabaseConnection = async () => {
+      try {
+        const client = await pool.connect();
+        console.log("Database connection pool is available.");
+        client.release(); // 释放连接
+        return true; // 返回成功状态
+      } catch (error) {
+        console.error("Failed to connect to the database:", error);
+        return false; // 返回失败状态
+      }
+    };
+  
+    // 调用异步函数并处理结果
+    checkDatabaseConnection().then((isConnected) => {
+      if (isConnected) {
+        console.log("Proceeding with further actions...");
+        // 在这里执行后续逻辑，例如更新状态或调用其他函数
+      } else {
+        console.error("Database connection is not available. Skipping further actions.");
+        // 如果连接失败，可以选择设置一个状态变量或执行其他错误处理逻辑
+      }
+    });
+  }, []); // 空依赖数组表示这个 effect 只在组件挂载时运行一
 
   useEffect(() => {
     console.log("Session messages:", session.messages);
