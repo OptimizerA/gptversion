@@ -2,6 +2,7 @@
 // import jwtDecode from 'jwt-decode'; // Correct import for jwt-decode
 import {jwtDecode} from 'jwt-decode';
 import { JwtPayload } from 'jwt-decode';
+import pool from '../../lib/db';
 // Define a new interface that includes the expected properties from the JWT payload
 interface MyTokenPayload extends JwtPayload {
   username?: string;
@@ -587,16 +588,31 @@ function _Chat() {
           return { ...state, accessCode: decodedToken.gptAuth };
         });
       if (decodedToken.profile){
+          // 先检查数据库连接池是否可用
+        let client;
+        try {
+          client = await pool.connect(); // 尝试获取连接
+          console.log("Database connection pool is available.");
+        } catch (error) {
+          console.error("Failed to connect to the database:", error);
+          return; // 如果连接失败，直接返回，避免后续操作
+        } finally {
+          if (client) {
+            client.release(); // 释放连接
+          }
+        }
+
+        // 如果连接池可用，继续更新会话
         chatStore.updateCurrentSession(session => {
-          const updatedMask = { ...session.mask }; // Copy the current mask
-          updatedMask.context[0].content = decodedToken.prompt; // Modify the context by adding a new item
+          const updatedMask = { ...session.mask }; // 复制当前的 mask
+          updatedMask.context[0].content = decodedToken.prompt; // 修改上下文内容
           updatedMask.context[1].content = decodedToken.profile;
           updatedMask.context[2].content = decodedToken.course;
-          session.mask = updatedMask; // Set the modified mask back to the session
+          session.mask = updatedMask; // 将修改后的 mask 设置回会话
           console.log("now the context1 is", session.mask.context[0].content);
           console.log("now the context2 is", session.mask.context[1].content);
           console.log("now the context3 is", session.mask.context[2].content);
-      });
+        });
       }
       if (decodedToken.username) {
             setExtractedUsername(decodedToken.username);
@@ -753,7 +769,7 @@ function _Chat() {
     if (!userResponse.ok) {
       throw new Error('Failed to fetch user ID');
     }
-    
+
     const { UserID } = await userResponse.json();
     const params1 = new URLSearchParams(window.location.search);
     const questionid1 = params1.get("QuestionID");
