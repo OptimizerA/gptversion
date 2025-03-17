@@ -67,9 +67,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
-  console.log("开始", req.body);
   const { action, ...data } = req.body;
-
+  console.log("action: " + action);
   try {
     if (action === 'insertInteraction') {
       console.log("开始");
