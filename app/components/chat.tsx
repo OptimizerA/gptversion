@@ -2,7 +2,6 @@
 // import jwtDecode from 'jwt-decode'; // Correct import for jwt-decode
 import {jwtDecode} from 'jwt-decode';
 import { JwtPayload } from 'jwt-decode';
-import pool from '../../lib/db'
 // Define a new interface that includes the expected properties from the JWT payload
 interface MyTokenPayload extends JwtPayload {
   username?: string;
@@ -532,17 +531,6 @@ function _Chat() {
   const navigate = useNavigate();
   // prompt hints
   const promptStore = usePromptStore();
-  const checkDatabaseConnection = async () => {
-    try {
-      const client = await pool.connect();
-      console.log("Database connection pool is available.");
-      client.release(); // 释放连接
-      return true; // 返回成功状态
-    } catch (error) {
-      console.error("Failed to connect to the database:", error);
-      return false; // 返回失败状态
-    }
-  };
 
   useEffect(() => {
     console.log("Session messages:", session.messages);
@@ -591,52 +579,35 @@ function _Chat() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-
+    
     if (token) {
       const decodedToken = jwtDecode<MyTokenPayload>(token);
-
-      // 检查数据库连接池状态
-      const checkConnectionAndProceed = async () => {
-        const isConnected = await checkDatabaseConnection();
-        if (!isConnected) {
-          console.error("Database connection is not available. Skipping further actions.");
-          return;
-        }
-
-        // 如果连接成功，继续执行后续逻辑
-        if (decodedToken.gptAuth) {
-          updateAccessStore((state) => {
-            return { ...state, accessCode: decodedToken.gptAuth };
-          });
-        }
-
-        if (decodedToken.profile) {
-          chatStore.updateCurrentSession(session => {
-            const updatedMask = { ...session.mask }; // Copy the current mask
-            updatedMask.context[0].content = decodedToken.prompt; // Modify the context by adding a new item
-            updatedMask.context[1].content = decodedToken.profile;
-            updatedMask.context[2].content = decodedToken.course;
-            session.mask = updatedMask; // Set the modified mask back to the session
-            console.log("now the context1 is", session.mask.context[0].content);
-            console.log("now the context2 is", session.mask.context[1].content);
-            console.log("now the context3 is", session.mask.context[2].content);
-          });
-        }
-
-        if (decodedToken.username) {
-          setExtractedUsername(decodedToken.username);
-        }
-
-        console.log('Extracted Username:', decodedToken.username);
-        console.log('Extracted Experiment Group:', decodedToken.experimentGroup);
-        console.log('Extracted pwd:', decodedToken.password);
-      };
-
-      checkConnectionAndProceed();
+      if (decodedToken.gptAuth) {
+        updateAccessStore((state) => {
+          return { ...state, accessCode: decodedToken.gptAuth };
+        });
+      if (decodedToken.profile){
+        chatStore.updateCurrentSession(session => {
+          const updatedMask = { ...session.mask }; // Copy the current mask
+          updatedMask.context[0].content = decodedToken.prompt; // Modify the context by adding a new item
+          updatedMask.context[1].content = decodedToken.profile;
+          updatedMask.context[2].content = decodedToken.course;
+          session.mask = updatedMask; // Set the modified mask back to the session
+          console.log("now the context1 is", session.mask.context[0].content);
+          console.log("now the context2 is", session.mask.context[1].content);
+          console.log("now the context3 is", session.mask.context[2].content);
+      });
+      }
+      if (decodedToken.username) {
+            setExtractedUsername(decodedToken.username);
+      }
+      console.log('Extracted Username:', decodedToken.username);
+      console.log('Extracted Experiment Group:', decodedToken.experimentGroup);
+      console.log('Extracted pwd:', decodedToken.password);
+      }
     }
-
     console.log('Extracted Username (extractedUsername state1):', extractedUsername);
-  }, [updateAccessStore, extractedUsername]);
+  }, [updateAccessStore,extractedUsername]);
   const [botResponseCount, setBotResponseCount] = useState(0);
   useEffect(measure, [userInput]);
   // chat commands shortcuts
@@ -762,12 +733,6 @@ function _Chat() {
   const doSubmit = async (userInput: string, questionId?: number) => {
     if (userInput.trim() === "") return;
     // Fetch UserID based on the username
-    // 检查 extractedUsername 是否已正确设置
-    console.log("Current extractedUsername:", extractedUsername); // 记录当前用户名
-    if (!extractedUsername) {
-      console.error("extractedUsername is not set or is null");
-      return; // 如果用户名未设置，提前返回
-    }
     const userResponse = await fetch('/api/recordInteraction', {
       method: 'POST',
       headers: {
@@ -782,7 +747,6 @@ function _Chat() {
     if (!userResponse.ok) {
       throw new Error('Failed to fetch user ID');
     }
-
     const { UserID } = await userResponse.json();
     const params1 = new URLSearchParams(window.location.search);
     const questionid1 = params1.get("QuestionID");
